@@ -43,7 +43,7 @@ async def loop():
 
         if not entries_new.empty:
             entries_new = entries_new.reset_index(drop=True)
-            await channel.send(f'{len(entries_new)}個の新着記事があります!!')
+            print(f'{len(entries_new)}個の新着記事があります!!')
 
             for index, row in entries_new.iterrows():
                 embed = discord.Embed(
