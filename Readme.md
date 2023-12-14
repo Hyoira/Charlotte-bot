@@ -87,5 +87,21 @@ sudo chmod +x /usr/local/bin/chromedriver
 データフレームを扱う
 `pip install pandas`
 
+### python-dotenv
+環境変数の管理
+`pip install python-dotenv`
+
 ### Pythonライブラリをまとめてインストール
 `pip install -U selenium discord.py beautifulsoup4 pandas`
+
+## 環境変数設定
+秘匿情報であるbotのTOKENを管理する
+
+rootディレクトリに `.env` ファイルを作成し、以下を記述
+```
+BOT_TOKEN = "token here"
+CHANNEL_ID = "channel id here"
+```
+また、`.gitignore` に `.env` を指定する (このリポジトリをクローンしているならそのままでOK)
+
+これで config.py を経由して環境変数が読み込まれる

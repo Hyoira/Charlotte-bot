@@ -1,60 +1,66 @@
 import pandas as pd
 from bs4 import BeautifulSoup
+import scraper
 
-# パース済みhtmlファイル
-file_path = './response02_scraped.html'
 
-# データを格納するための空のリストを作成
-data = []
+class Comparator:
 
-# ファイルを読み込み、BeautifulSoupオブジェクトを作成
-with open(file_path, 'r', encoding='utf-8') as file:
-    soup = BeautifulSoup(file, 'html.parser')
+  scraper.Scraper()
 
-# 各ニュース項目に対して処理を行う
-for news_item in soup.find_all('a', class_='news__title'):
-    # 各項目から必要な情報を取得
-    url = f"https://genshin.hoyoverse.com{news_item['href']}"
-    title = news_item.find('h3').get_text(strip=True)
-    cover_image = news_item.find('img', class_='coverFit')['src']
-    summary = news_item.find('p', class_='news__summary').get_text(strip=True)
-    
-    # データをリストに追加
-    data.append({
-        "Title": title,
-        "URL": url,
-        "Cover Image": cover_image,
-        "Summary": summary
-    })
+  # パース済みhtmlファイル
+  file_path = './response02_scraped.html'
 
-# データリストからPandasデータフレームを作成
-articles = pd.DataFrame(data)
+  # データを格納するための空のリストを作成
+  data = []
 
-########
+  # ファイルを読み込み、BeautifulSoupオブジェクトを作成
+  with open(file_path, 'r', encoding='utf-8') as file:
+      soup = BeautifulSoup(file, 'html.parser')
 
-# 前回のデータが保存されたCSVを読み込む
-# 前回のデータがない場合は空のDataFrameを作成する
-try:
-    articles_prev = pd.read_csv('entries_prev.csv')
-except FileNotFoundError:
-    articles_prev = pd.DataFrame()
+  # 各ニュース項目に対して処理を行う
+  for news_item in soup.find_all('a', class_='news__title'):
+      # 各項目から必要な情報を取得
+      url = f"https://genshin.hoyoverse.com{news_item['href']}"
+      title = news_item.find('h3').get_text(strip=True)
+      cover_image = news_item.find('img', class_='coverFit')['src']
+      summary = news_item.find('p', class_='news__summary').get_text(strip=True)
+      
+      # データをリストに追加
+      data.append({
+          "Title": title,
+          "URL": url,
+          "Cover Image": cover_image,
+          "Summary": summary
+      })
 
-# 新しいデータと前回のデータフレームを比較して差分を抽出
-if not articles_prev.empty:
-    # 新旧データフレームの結合と重複の削除
-    articles_combined = pd.concat([articles_prev, articles]).drop_duplicates(keep=False)
-    
-    # 差分データのみを抽出
-    entries_new = articles_combined[~articles_combined.apply(tuple,1).isin(articles_prev.apply(tuple,1))]
-else:
-    # 前回のデータが存在しない場合は、新しいデータすべてが差分
-    entries_new = articles
+  # データリストからPandasデータフレームを作成
+  articles = pd.DataFrame(data)
 
-# 結果の差分データフレームを表示
-# print(entries_new)
+  ########
 
-# 新しいデータをCSVファイルに書き出す（次回比較用）
-articles.to_csv('entries_prev.csv', index=False, encoding='utf-8')
+  # 前回のデータが保存されたCSVを読み込む
+  # 前回のデータがない場合は空のDataFrameを作成する
+  try:
+      articles_prev = pd.read_csv('entries_prev.csv')
+  except FileNotFoundError:
+      articles_prev = pd.DataFrame()
 
-# 差分データを別のCSVファイルにで管理する場合（オプション）
-entries_new.to_csv('entries_new.csv', index=False, encoding='utf-8')
+  # 新しいデータと前回のデータフレームを比較して差分を抽出
+  if not articles_prev.empty:
+      # 新旧データフレームの結合と重複の削除
+      articles_combined = pd.concat([articles_prev, articles]).drop_duplicates(keep=False)
+      
+      # 差分データのみを抽出
+      entries_new = articles_combined[~articles_combined.apply(tuple,1).isin(articles_prev.apply(tuple,1))]
+  else:
+      # 前回のデータが存在しない場合は、新しいデータすべてが差分
+      entries_new = articles
+
+  # 結果の差分データフレームを表示
+  print(entries_new)
+
+  # 新しいデータをCSVファイルに書き出す（次回比較用）
+  articles.to_csv('entries_prev.csv', index=False, encoding='utf-8')
+
+  # 差分データを別のCSVファイルで管理する場合（オプション）
+#   entries_new.to_csv('entries_new.csv', index=False, encoding='utf-8')
