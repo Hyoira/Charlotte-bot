@@ -20,16 +20,16 @@ client = discord.Client(intents=intents)
 # 新着記事を取得
 comparator = comparator.Comparator()
 entries_new = comparator.entries_new
-print(entries_new)
 
+if entries_new.empty:
+  print(entries_new)
 
 """
 @tasks.loop(seconds=300)
 async def loop():
-    # botが起動するまで待つ
     await client.wait_until_ready()
     channel = client.get_channel(channel_id)
-    await channel.send('時間だよ')  
+    await channel.send('時間だよ')
 
 #ループ処理実行
 loop.start()
