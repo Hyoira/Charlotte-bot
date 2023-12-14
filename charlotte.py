@@ -1,6 +1,7 @@
 import discord
 from discord.ext import tasks
 import config
+import comparator
 
 
 # トークンの読み込み
@@ -16,9 +17,14 @@ intents.message_content = True
 # クライアントの生成
 client = discord.Client(intents=intents)
 
+# 新着記事を取得
+comparator = comparator.Comparator()
+entries_new = comparator.entries_new
+print(entries_new)
 
-# 60秒に一回ループ
-@tasks.loop(seconds=60)
+
+"""
+@tasks.loop(seconds=300)
 async def loop():
     # botが起動するまで待つ
     await client.wait_until_ready()
@@ -29,3 +35,4 @@ async def loop():
 loop.start()
 
 client.run(token)
+"""

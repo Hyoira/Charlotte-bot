@@ -44,19 +44,19 @@ class Comparator:
   except FileNotFoundError:
       articles_prev = pd.DataFrame(columns=["Title", "URL", "Cover Image", "Summary"])
 
+  articles_prev_filled = articles_prev.fillna('')
+
   # 新しいデータと前回のデータフレームを比較して差分を抽出
   if not articles_prev.empty:
       # 新旧データフレームの結合と重複の削除
-      articles_combined = pd.concat([articles_prev, articles]).drop_duplicates(keep=False)
+      articles_combined = pd.concat([articles_prev_filled, articles]).drop_duplicates(keep=False)
       
       # 差分データのみを抽出
-      entries_new = articles_combined[~articles_combined.apply(tuple,1).isin(articles_prev.apply(tuple,1))]
+      entries_new = articles_combined[~articles_combined.apply(tuple,1).isin(articles_prev_filled.apply(tuple,1))]
   else:
       # 前回のデータが存在しない場合は、新しいデータすべてが差分
       entries_new = articles
 
-  # 結果の差分データフレームを表示
-#   print(entries_new)
 
   # 新しいデータをCSVファイルに書き出す（次回比較用）
   articles.to_csv('entries_prev.csv', index=False, encoding='utf-8')
