@@ -74,25 +74,8 @@ sudo chmod +x /usr/local/bin/chromedriver
 `chromedriver --version` -->
 
 
-### selenium
-`pip install selenium`
-
-### discord
-`pip install -U discord.py`
-
-### BeautifulSoup4
-`pip install beautifulsoup4`
-
-### Pandas
-データフレームを扱う
-`pip install pandas`
-
-### python-dotenv
-環境変数の管理
-`pip install python-dotenv`
-
-### Pythonライブラリをまとめてインストール
-`pip install -U selenium discord.py beautifulsoup4 pandas`
+### Pythonライブラリをインストール
+`pip install -U selenium discord.py beautifulsoup4 pandas python-dotenv`
 
 ## 環境変数設定
 秘匿情報であるbotのTOKENを管理する

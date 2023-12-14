@@ -17,15 +17,11 @@ intents.message_content = True
 # クライアントの生成
 client = discord.Client(intents=intents)
 
-# 新着記事を取得
-comparator = comparator.Comparator()
-entries_new = comparator.entries_new
-
-if entries_new.empty:
-  print(entries_new)
+# if entries_new.empty:
+# print(entries_new["Title"])
 
 """
-@tasks.loop(seconds=300)
+@tasks.loop(seconds=30)
 async def loop():
     await client.wait_until_ready()
     channel = client.get_channel(channel_id)
@@ -36,3 +32,37 @@ loop.start()
 
 client.run(token)
 """
+
+@client.event
+async def on_message(message):
+    if message.author.bot:
+        return
+
+    if message.content == '!test':
+        # 新着記事を取得
+        try:
+            comp = comparator.Comparator()
+            entries_new = comp.entries_new
+            await message.channel.send('新着記事のチェックが完了しました!!')
+
+            if not entries_new.empty:
+               entries_new = entries_new.reset_index(drop=True)
+        except: 
+            await message.channel.send('エラーが発生しました。')
+            return
+
+        if entries_new.empty:
+          await message.channel.send('新着記事はありません')
+          return
+        else:
+          await message.channel.send(f'{len(entries_new)}個の新着記事があります!!')
+          for index, row in entries_new.iterrows():
+            embed = discord.Embed(
+               title=row['Title'], 
+               url=row['URL'], 
+               description=row['Summary'], 
+               color=0x00bfff)
+            embed.set_image(url=row['Cover Image'])
+            await message.channel.send(embed=embed)
+
+client.run(token)
