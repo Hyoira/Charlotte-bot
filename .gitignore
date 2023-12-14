@@ -1,6 +1,6 @@
 output*
-entries*
 *.html
+*.csv
 
 # 環境変数ファイル
 .env

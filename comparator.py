@@ -56,7 +56,7 @@ class Comparator:
       entries_new = articles
 
   # 結果の差分データフレームを表示
-  print(entries_new)
+#   print(entries_new)
 
   # 新しいデータをCSVファイルに書き出す（次回比較用）
   articles.to_csv('entries_prev.csv', index=False, encoding='utf-8')
