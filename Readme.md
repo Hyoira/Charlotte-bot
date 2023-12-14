@@ -84,6 +84,7 @@ sudo chmod +x /usr/local/bin/chromedriver
 `pip install beautifulsoup4`
 
 ### Pandas
+データフレームを扱う
 `pip install pandas`
 
 ### Pythonライブラリをまとめてインストール
