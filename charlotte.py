@@ -8,8 +8,7 @@ import asyncio
 token = config.BOT_TOKEN
 
 # チャンネルIDの読み込み
-# channel_id = config.CHANNEL_ID
-channel_id = '1184446396624011265'
+channel_id = config.CHANNEL_ID
 
 # インテントの生成
 intents = discord.Intents.default()
