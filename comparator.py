@@ -7,7 +7,8 @@ class Comparator:
     
     def __init__(self):
         # スクレイピング処理を実行
-        scraper.Scraper() 
+        if __name__ == '__main__':
+          scraper.Scraper() 
 
         # パース済みhtmlファイル
         file_path = './scraped.html'
@@ -36,6 +37,7 @@ class Comparator:
 
         # データリストからPandasデータフレームを作成
         self.articles = pd.DataFrame(data)
+        print(data)
 
         # 前回のデータが保存されたCSVを読み込む / ない場合はリセット
         self.reset_or_load_previous_data()

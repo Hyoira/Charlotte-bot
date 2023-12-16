@@ -1,16 +1,16 @@
 from selenium import webdriver
 from bs4 import BeautifulSoup
-# import chromedriver_binary
+import chromedriver_binary
+from selenium.webdriver.chrome.options import Options
 
 class Scraper:
   # WebDriverのパスとオプションを設定
-  options = webdriver.ChromeOptions()
+  options = Options()
   options.add_argument("--no-sandbox")  # サンドボックスモードを無効化するオプション
-  options.add_argument("--headless")    # ヘッドレスモードで実行するオプション
-  options.add_argument("--lang=ja-JP")  # 日本語化するオプション
+  options.add_experimental_option('prefs', {'intl.accept_languages': 'ja'}) # 言語を日本語に設定するオプション
   driver = webdriver.Chrome(options=options)
 
-  # スクレイピングするページのURL
+    # スクレイピング対象のURL
   url = "https://genshin.hoyoverse.com/ja/news/"
 
   # JavaScriptが実行されるまで待つためにページを取得

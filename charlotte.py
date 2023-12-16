@@ -1,64 +1,78 @@
 import discord
-from discord.ext import tasks
-import config
-import comparator
+from discord.ext import commands, tasks
 import asyncio
+import os
+from get_latest_news import Scrape, Convert, UpdateCheck
+import dotenv
+dotenv.load_dotenv(override=True)
 
-# トークンの読み込み
-token = config.BOT_TOKEN
 
-# チャンネルIDの読み込み
-channel_id = config.CHANNEL_ID
+# 環境変数
+token = os.getenv('BOT_TOKEN')
+channel_id = int(os.getenv('CHANNEL_ID'))
 
-# インテントの生成
+print(os.getenv('CHANNEL_ID'))
+
+# 必要な intents を設定
 intents = discord.Intents.default()
+intents.messages = True
+intents.guilds = True
 intents.message_content = True
 
-# クライアントの生成
+# intents を渡して Bot インスタンスを作成
+# bot = commands.Bot(command_prefix='!', intents=intents)
 client = discord.Client(intents=intents)
 
-
+# ログイン時にターミナルに通知する
 @client.event
 async def on_ready():
     print(f'Logged in as {client.user.name}')
 
-    channel = await client.fetch_channel(channel_id)
-
-    if not channel:
-        print(f"指定されたIDのチャンネルが見つかりません: {config.CHANNEL_ID}")
-    else:
-        print(f"チャンネル「{channel.name}」が見つかりました")
-        loop.start()  # チャンネルが見つかったときのみタスクを開始
+    try:
+        channel = await client.fetch_channel(channel_id)
+    except discord.NotFound:
+        print(f"指定されたIDのチャンネルが見つかりません: {channel_id}")
+        return
+    except discord.HTTPException as e:
+        print(f"チャンネルの取得に失敗しました: {e}")
+        return
+    print(f"チャンネル「{channel.name}」が見つかりました")
+    check_updates.start()
+        
 
 
 @tasks.loop(seconds=60)
-async def loop():
-    await client.wait_until_ready()
-    entries_new = None
+async def check_updates():
     channel = await client.fetch_channel(channel_id)
+    print('Checking for updates...')
 
-    try:
-        comp = comparator.Comparator()
-        entries_new = comp.entries_new
+    Scrape()
+    new_data = Convert.articles
+    checker = UpdateCheck()
 
-        if not entries_new.empty:
-            entries_new = entries_new.reset_index(drop=True)
-            print(f'{len(entries_new)}個の新着記事があります!!')
+    # 新しい更新がある行のみを取得
+    updates = checker.check_for_updates('data_prev.csv', new_data)
+    
+    if not updates.empty:
+        # 新しいデータをCSVファイルに保存、次回更新チェック用
+        new_data.to_csv('data_prev.csv', index=False)
 
-            for index, row in entries_new.iterrows():
-                embed = discord.Embed(
-                    title=row['Title'],
-                    url=row['URL'],
-                    description=row['Summary'],
-                    color=0x00bfff)
-                embed.set_image(url=row['Cover Image'])
-                await channel.send(embed=embed)
-        else:
-            print('新着記事はありません')
+        for index, row in updates.iterrows():
+            embed = discord.Embed(
+                title=row['Title'],
+                url=row['URL'],
+                description=row['Summary'],
+                color=0x00bfff)
+            embed.set_image(url=row['Cover Image'])
+            await channel.send(embed=embed)
+    else:
+        print("No updates")
 
-    except Exception as e:  # ここで発生した例外の種類とメッセージを出力
-        print(f'エラーが発生しました: {e}')
-        await channel.send('エラーが発生しました。詳細はログを確認してください。')
+@client.event
+async def on_message(message):
+    if message.content == '!ping':
+        await message.channel.send('pong')
 
 
+# Botのトークンを環境変数から取得して実行
 client.run(token)

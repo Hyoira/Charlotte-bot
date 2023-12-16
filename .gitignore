@@ -6,7 +6,7 @@ output*
 .env
 
 # テストファイル
-test.*
+test*
 
 
 # Byte-compiled / optimized / DLL files
