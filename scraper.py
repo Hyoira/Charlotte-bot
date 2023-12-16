@@ -4,7 +4,10 @@ import chromedriver_binary
 
 class Scraper:
   # WebDriverのパスとオプションを設定
-  driver = webdriver.Chrome()
+  options = webdriver.ChromeOptions()
+  options.add_argument("--no-sandbox")  # サンドボックスモードを無効化するオプション
+  options.add_argument("--headless")    # ヘッドレスモードで実行するオプション
+  driver = webdriver.Chrome(options=options)
 
   # スクレイピングするページのURL
   url = "https://genshin.hoyoverse.com/ja/news/"
