@@ -7,6 +7,7 @@ class Scraper:
   options = webdriver.ChromeOptions()
   options.add_argument("--no-sandbox")  # サンドボックスモードを無効化するオプション
   options.add_argument("--headless")    # ヘッドレスモードで実行するオプション
+  options.add_argument("--lang=ja-JP")  # 日本語化するオプション
   driver = webdriver.Chrome(options=options)
 
   # スクレイピングするページのURL
