@@ -69,6 +69,7 @@ async def check_updates():
     else:
         print("No updates")
 
+# テスト用
 @client.event
 async def on_message(message):
     if message.content == '!ping':
