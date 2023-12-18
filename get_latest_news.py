@@ -4,14 +4,14 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import os
 
-class Scrape:
+class Scrape: # データの取得
     @staticmethod
     def scrape(url):
         options = Options()
-        options.add_argument("--no-sandbox")
-        options.add_argument("--headless")
-        options.add_argument("Accept-Language: ja-JP")
-        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+        options.add_argument("--no-sandbox") # サンドボックスを無効化
+        options.add_argument("--headless") # ヘッドレスモードを有効化
+        options.add_argument("Accept-Language: ja-JP") # 日本語ページを指定
+        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36") # ユーザーエージェントを指定
 
         driver = webdriver.Chrome(options=options)
         try:
@@ -21,7 +21,7 @@ class Scrape:
         finally:
             driver.quit()
 
-class Convert:
+class Convert: # データの整形
     @staticmethod
     def convert(html):
         soup = BeautifulSoup(html, 'html.parser')
@@ -42,7 +42,7 @@ class Convert:
 
         return pd.DataFrame(data)
 
-class UpdateCheck:
+class UpdateCheck: # データの比較
     @staticmethod
     def check_for_updates(old_file, new_data):
         try:
@@ -62,6 +62,7 @@ class UpdateCheck:
 
         return new_entries.drop(columns=['_merge'])
 
+# テスト用
 if __name__ == "__main__":
     url = "https://genshin.hoyoverse.com/ja/news/"
     html = Scrape.scrape(url)

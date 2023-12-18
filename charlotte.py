@@ -4,8 +4,8 @@ import asyncio
 import os
 from get_latest_news import Scrape, Convert, UpdateCheck
 import dotenv
-dotenv.load_dotenv(override=True)
 
+dotenv.load_dotenv(override=True)
 
 # 環境変数
 token = os.getenv('BOT_TOKEN')
