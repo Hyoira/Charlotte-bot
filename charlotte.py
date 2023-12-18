@@ -46,8 +46,9 @@ async def check_updates():
     channel = await client.fetch_channel(channel_id)
     print('Checking for updates...')
 
-    Scrape()
-    new_data = Convert.articles
+    scraper = Scrape()
+    html = scraper.scrape("https://genshin.hoyoverse.com/ja/news/")
+    new_data = Convert.convert(html)
     checker = UpdateCheck()
 
     # 新しい更新がある行のみを取得
