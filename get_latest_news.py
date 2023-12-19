@@ -8,9 +8,9 @@ class Scrape: # データの取得
     @staticmethod
     def scrape(url):
         options = Options()
-        options.add_argument("--no-sandbox") # サンドボックスを無効化
         options.add_argument("--headless") # ヘッドレスモードを有効化
         options.add_argument("--lang=ja-JP") # 日本語ページを指定
+        options.add_experimental_option('prefs', {'intl.accept_languages': 'ja'})
 
         driver = webdriver.Chrome(options=options)
 
@@ -59,10 +59,11 @@ class UpdateCheck: # データの比較
             on=["Title", "URL", "Cover Image", "Summary"], 
             how='left', 
             indicator=True)
-        new_entries = merged_data[merged_data['_merge'] == 'left_only']
+        
+        new_entries = merged_data[merged_data['_merge'] == 'left_only'] # 新規記事だけを抽出
 
         if not new_entries.empty:
-            new_entries.to_csv(old_file, index=False)
+            # new_entries.to_csv(old_file, index=False)
             print(f"{len(new_entries)}件の新着記事があります")
         else:
             print("新着記事なし")

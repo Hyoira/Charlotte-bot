@@ -3,6 +3,7 @@ from discord.ext import tasks
 import os
 from get_latest_news import Scrape, Convert, UpdateCheck
 import dotenv
+import datetime
 
 # 環境変数の読み込み
 dotenv.load_dotenv(override=True)
@@ -43,7 +44,8 @@ async def on_ready():
 @tasks.loop(seconds=60)
 async def check_updates():
     channel = await client.fetch_channel(channel_id)
-    print('Checking for updates...')
+    now = datetime.datetime.now()
+    print('Checking for updates...{0: %m/%d %H:%M}'.format(now))
 
     scraper = Scrape()
     html = scraper.scrape("https://genshin.hoyoverse.com/ja/news/")
