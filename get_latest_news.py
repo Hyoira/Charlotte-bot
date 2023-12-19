@@ -10,8 +10,7 @@ class Scrape: # データの取得
         options = Options()
         options.add_argument("--no-sandbox") # サンドボックスを無効化
         options.add_argument("--headless") # ヘッドレスモードを有効化
-        options.add_argument("Accept-Language: ja-JP") # 日本語ページを指定
-        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36") # ユーザーエージェントを指定
+        options.add_argument("--lang=ja-JP") # 日本語ページを指定
 
         driver = webdriver.Chrome(options=options)
         try:
