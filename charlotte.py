@@ -1,13 +1,11 @@
 import discord
-from discord.ext import commands, tasks
-import asyncio
+from discord.ext import tasks
 import os
 from get_latest_news import Scrape, Convert, UpdateCheck
 import dotenv
 
+# 環境変数の読み込み
 dotenv.load_dotenv(override=True)
-
-# 環境変数
 token = os.getenv('BOT_TOKEN')
 channel_id = int(os.getenv('CHANNEL_ID'))
 
@@ -20,7 +18,6 @@ intents.guilds = True
 intents.message_content = True
 
 # intents を渡して Bot インスタンスを作成
-# bot = commands.Bot(command_prefix='!', intents=intents)
 client = discord.Client(intents=intents)
 
 # ログイン時にターミナルに通知する
@@ -28,6 +25,8 @@ client = discord.Client(intents=intents)
 async def on_ready():
     print(f'Logged in as {client.user.name}')
 
+    # 指定されたチャンネルを取得
+    # チャンネルが取得できていたら更新チェックを開始
     try:
         channel = await client.fetch_channel(channel_id)
     except discord.NotFound:
@@ -40,7 +39,7 @@ async def on_ready():
     check_updates.start()
         
 
-
+# ニュースの更新チェック
 @tasks.loop(seconds=60)
 async def check_updates():
     channel = await client.fetch_channel(channel_id)
@@ -55,9 +54,10 @@ async def check_updates():
     updates = checker.check_for_updates('data_prev.csv', new_data)
     
     if not updates.empty:
-        # 新しいデータをCSVファイルに保存、次回更新チェック用
+        # 新しいデータをCSVファイルに保存 (次回更新チェック用)
         new_data.to_csv('data_prev.csv', index=False)
 
+        # Discordに埋め込みメッセージとして送信
         for index, row in updates.iterrows():
             embed = discord.Embed(
                 title=row['Title'],
