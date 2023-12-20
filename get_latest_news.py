@@ -41,7 +41,9 @@ class Convert: # データの整形
                 "Summary": summary
             })
 
-        return pd.DataFrame(data) # データフレームで返す
+            data_filled = pd.DataFrame(data).fillna('') # 欠損値を空文字で埋める
+
+        return pd.DataFrame(data_filled) # データフレームで返す
 
 class UpdateCheck: # データの比較
     @staticmethod
@@ -65,8 +67,8 @@ class UpdateCheck: # データの比較
         if not new_entries.empty:
             # new_entries.to_csv(old_file, index=False)
             print(f"{len(new_entries)}件の新着記事があります")
-        else:
-            print("新着記事なし")
+        # else:
+            # print("新着記事なし")
 
         return new_entries.drop(columns=['_merge'])
 
