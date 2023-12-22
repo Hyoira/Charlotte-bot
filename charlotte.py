@@ -21,7 +21,7 @@ intents.message_content = True
 # intents を渡して Bot インスタンスを作成
 client = discord.Client(intents=intents)
 
-# ログイン時にターミナルに通知する
+# ログイン確認
 @client.event
 async def on_ready():
     print(f'Logged in as {client.user.name}')
