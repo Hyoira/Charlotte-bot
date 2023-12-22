@@ -11,7 +11,7 @@ class Scrape: # データの取得
         options.add_argument("--headless") # ヘッドレスモードを有効化
         options.add_argument("--lang=ja-JP") # 日本語ページを指定
         options.add_argument("--incognito") # シークレットモードを有効化
-        options.add_experimental_option('prefs', {'intl.accept_languages': 'ja_JP'})
+        options.add_experimental_option('prefs', {'intl.accept_languages': 'ja-JP'})
 
         driver = webdriver.Chrome(options=options)
 
