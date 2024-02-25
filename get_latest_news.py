@@ -10,7 +10,6 @@ class Scrape: # データの取得
         options = Options()
         options.add_argument("--headless") # ヘッドレスモードを有効化
         options.add_argument("--lang=ja-JP") # 日本語ページを指定
-        options.add_argument("--incognito") # シークレットモードを有効化
         options.add_experimental_option('prefs', {'intl.accept_languages': 'ja-JP'})
 
         driver = webdriver.Chrome(options=options)
@@ -42,9 +41,7 @@ class Convert: # データの整形
                 "Summary": summary
             })
 
-            data_filled = pd.DataFrame(data).fillna('') # 欠損値を空文字で埋める
-
-        return pd.DataFrame(data_filled) # データフレームで返す
+        return pd.DataFrame(data).fillna('') # データフレームに変換
 
 class UpdateCheck: # データの比較
     @staticmethod
