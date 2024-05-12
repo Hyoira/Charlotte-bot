@@ -30,9 +30,9 @@ class Convert: # データの整形
         # 記事のタイトル、URL、サムネイル画像、概要を取得
         for news_item in soup.find_all('a', class_='news__title news__content ellipsis'):
             url = f"https://genshin.hoyoverse.com{news_item['href']}"
-            title = news_item.find('h3').get_text(strip=True)
+            title = news_item.find('h3').get_text(strip=True).replace('\n', '<n>')
             cover_image = news_item.find('img', class_='coverFit')['src']
-            summary = news_item.find('p', class_='news__summary').get_text(strip=True)
+            summary = news_item.find('p', class_='news__summary').get_text(strip=True).replace('\n', '<n>')
 
             data.append({
                 "Title": title,
@@ -61,6 +61,8 @@ class UpdateCheck: # データの比較
             indicator=True)
         
         new_entries = merged_data[merged_data['_merge'] == 'left_only'] # 新規記事だけを抽出
+        
+        new_entries.drop(columns=['_merge']).to_csv('new_entries.csv', index=False) # テスト用
 
         if not new_entries.empty:
             # new_entries.to_csv(old_file, index=False)

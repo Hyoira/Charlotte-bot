@@ -62,9 +62,9 @@ async def check_updates():
         # Discordに埋め込みメッセージとして送信
         for index, row in updates.iterrows():
             embed = discord.Embed(
-                title=row['Title'],
+                title=row['Title'].replace('<n>', '\n'),
                 url=row['URL'],
-                description=row['Summary'],
+                description=row['Summary'].replace('<n>', '\n'),
                 color=0x00bfff)
             embed.set_image(url=row['Cover Image'])
             await channel.send(embed=embed)

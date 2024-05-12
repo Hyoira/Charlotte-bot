@@ -4,6 +4,7 @@ output*
 
 # 環境変数ファイル
 .env
+.python-version
 
 # テストファイル
 test*
