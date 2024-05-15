@@ -8,7 +8,7 @@ import datetime
 # 環境変数の読み込み
 dotenv.load_dotenv(override=True)
 token = os.getenv('BOT_TOKEN')
-channel_id = int(os.getenv('CHANNEL_ID2'))
+channel_id = int(os.getenv('CHANNEL_ID'))
 
 print('ChannelId: '+ os.getenv('CHANNEL_ID'))
 
