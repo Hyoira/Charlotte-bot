@@ -32,7 +32,12 @@ class Convert: # データの整形
             url = f"https://genshin.hoyoverse.com{news_item['href']}"
             title = news_item.find('h3').get_text(strip=True).replace('\n', '<n>')
             cover_image = news_item.find('img', class_='coverFit')['src']
-            summary = news_item.find('p', class_='news__summary').get_text(strip=True).replace('\n', '<n>')
+
+            if news_item.find('p', class_='news__summary').get_text(strip=True) == '':
+                print(f"概要がありません: {title} ({url})")
+                summary = ' '
+            else:
+                summary = news_item.find('p', class_='news__summary').get_text(strip=True).replace('\n', '<n>')
 
             data.append({
                 "Title": title,

@@ -8,9 +8,9 @@ import datetime
 # 環境変数の読み込み
 dotenv.load_dotenv(override=True)
 token = os.getenv('BOT_TOKEN')
-channel_id = int(os.getenv('CHANNEL_ID'))
+channel_id = int(os.getenv('CHANNEL_ID2'))
 
-print(os.getenv('CHANNEL_ID'))
+print('ChannelId: '+ os.getenv('CHANNEL_ID'))
 
 # 必要な intents を設定
 intents = discord.Intents.default()
@@ -41,7 +41,7 @@ async def on_ready():
         
 
 # ニュースの更新チェック
-@tasks.loop(seconds=60)
+@tasks.loop(seconds=30)
 async def check_updates():
     channel = await client.fetch_channel(channel_id)
     now = datetime.datetime.now()
@@ -60,7 +60,8 @@ async def check_updates():
         new_data.to_csv('data_prev.csv', index=False)
 
         # Discordに埋め込みメッセージとして送信
-        for index, row in updates.iterrows():
+        # for index, row in updates.iterrows():
+        for row in updates.to_dict(orient='records'):
             embed = discord.Embed(
                 title=row['Title'].replace('<n>', '\n'),
                 url=row['URL'],
@@ -77,6 +78,19 @@ async def on_message(message):
     if message.content == '!ping':
         await message.channel.send('pong')
 
+# bot停止コマンド
+@client.event
+async def on_message(message):
+    if message.content == '!charlottestop':
+        await message.channel.send('Botを停止します')
+        check_updates.stop()
+
+# bot再開コマンド
+@client.event
+async def on_message(message):
+    if message.content == '!charlottestart':
+        await message.channel.send('Botを再開します')
+        check_updates.start()
 
 # Botのトークンを環境変数から取得して実行
 client.run(token)
