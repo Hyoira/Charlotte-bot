@@ -27,20 +27,22 @@ guild_ids = [int(gid) for gid in os.getenv('GUILD_IDS', '').split(',') if gid.st
 guild_objects = [discord.Object(id=gid) for gid in guild_ids]
 print('GuildIds:', guild_ids)
 
+# チャンネルをキャッシュしておく辞書
+cached_channels = {}
+
 # コマンド定義（全てのギルドで即時反映）
-for guild in guild_objects:
-    @tree.command(name="callcharlotte", description="Pong!", guild=guild)
-    async def callcharlotte_command(interaction: discord.Interaction):
-        await interaction.response.send_message("しゃるぼっとよ‼️", ephemeral=True)
+@tree.command(name="callcharlotte", description="Pong!")
+async def callcharlotte_command(interaction: discord.Interaction):
+    await interaction.response.send_message("しゃるぼっとよ‼️", ephemeral=True)
 
-    @tree.command(name="test", description="テストコマンドです。", guild=guild)
-    async def test_command(interaction: discord.Interaction):
-        await interaction.response.send_message("てすとよ！", ephemeral=True)
+@tree.command(name="test", description="テストコマンドです。")
+async def test_command(interaction: discord.Interaction):
+    await interaction.response.send_message("てすとよ！", ephemeral=True)
 
-    @tree.command(name='testremind', description='エスコフィエの料理マシナリーを呼び出す', guild=guild)
-    async def test_remind(interaction: discord.Interaction):
-        await interaction.response.send_message("エスコフィエの料理マシナリーを呼び出すわよ！", ephemeral=True)
-        await remind_escoffier_test()
+@tree.command(name='testremind', description='エスコフィエの料理マシナリーを呼び出す')
+async def test_remind(interaction: discord.Interaction):
+    await interaction.response.send_message("エスコフィエの料理マシナリーを呼び出すわよ！", ephemeral=True)
+    await remind_escoffier_test(interaction.channel)
 
 # on_readyで各ギルドごとに同期
 @client.event
@@ -49,13 +51,20 @@ async def on_ready():
     for cid in channel_ids:
         try:
             channel = await client.fetch_channel(cid)
+            cached_channels[cid] = channel
             print(f"チャンネル「{channel.name}」({cid}) が見つかりました")
         except Exception as e:
             print(f"チャンネルID {cid} の取得に失敗: {e}")
     remind_escoffier.start()
+    remind_spiral.start()
+    # check_updates.start()
 
     # 各ギルドごとにコマンド同期
     for guild in guild_objects:
+        # コマンドを追加
+        # tree.add_command(callcharlotte_command, guild=guild)
+        # tree.add_command(test_command, guild=guild)
+        # tree.add_command(test_remind, guild=guild)
         try:
             synced = await tree.sync(guild=guild)
             print(f"Synced {len(synced)} commands for guild {guild.id}")
@@ -68,10 +77,10 @@ async def on_ready():
 
 
 # ニュースの更新チェック
-@tasks.loop(seconds=30)
+@tasks.loop(minutes=5)
 async def check_updates():
     for cid in channel_ids:
-        channel = await client.fetch_channel(cid)
+        channel = cached_channels.get(cid)
         now = datetime.datetime.now()
         print('Checking for updates...{0: %m/%d %H:%M}'.format(now))
 
@@ -110,7 +119,7 @@ async def remind_escoffier():
     # 月曜日かつ7:00ちょうどのみ送信
     if now.weekday() == 0 and now.hour == 7 and now.minute == 0:
         for cid in channel_ids:
-            channel = await client.fetch_channel(cid)
+            channel = cached_channels.get(cid)
             embed = discord.Embed(title="エスコフィエの料理マシナリーは呼び出したかしら？",
                                 description="おはよう、月曜日ね！\nエスコフィエさんに料理をつくってもらうのを忘れずにね！")
 
@@ -118,8 +127,7 @@ async def remind_escoffier():
 
             await channel.send(embed=embed)
 # 手動実行テスト用
-async def remind_escoffier_test():
-    channel = await client.fetch_channel(channel_ids[0])
+async def remind_escoffier_test(channel):
     embed = discord.Embed(
         title="エスコフィエの料理マシナリーは呼び出したかしら？",
         description="おはよう、月曜日ね！\nエスコフィエさんに料理をつくってもらうのを忘れずにね！")
@@ -138,7 +146,7 @@ async def remind_spiral():
     now = datetime.datetime.now()
     if now.day == 15 and now.hour == 7 and now.minute == 0:
         for cid in channel_ids:
-            channel = await client.fetch_channel(cid)
+            channel = cached_channels.get(cid)
             embed = discord.Embed(title="今月の螺旋は終わったかしら？",
                                 description="おはよう、今月の螺旋も最終日ね！\n報酬の受け取りも忘れないように！")
 
