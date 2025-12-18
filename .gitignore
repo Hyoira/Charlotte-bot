@@ -1,6 +1,7 @@
 output*
 *.html
 *.csv
+*.sh
 
 # 環境変数ファイル
 .env
