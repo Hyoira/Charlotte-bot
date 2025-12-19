@@ -3,7 +3,7 @@ from discord import app_commands, embeds
 from datetime import time, timezone, timedelta
 from discord.ext import tasks
 import os
-from get_latest_news import Scrape, Convert, UpdateCheck, GameNews
+from get_latest_news import UpdateCheck, GameNews
 from dotenv import load_dotenv
 import datetime
 import asyncio
@@ -37,67 +37,74 @@ print('GuildIds:', guild_ids)
 cached_channels = {}
 
 # コマンド定義（全てのギルドで即時反映）
-@tree.command(name="callcharlotte", description="Pong!")
-async def callcharlotte_command(interaction: discord.Interaction):
-    await interaction.response.send_message("しゃるぼっとよ‼️", ephemeral=True)
 
-@tree.command(name="test", description="テストコマンドです。")
-async def test_command(interaction: discord.Interaction):
-    await interaction.response.send_message("てすとよ！", ephemeral=True)
 
-@tree.command(name='testremind', description='エスコフィエの料理マシナリーを呼び出す')
-async def test_remind(interaction: discord.Interaction):
-    await interaction.response.send_message("エスコフィエの料理マシナリーを呼び出すわよ！", ephemeral=True)
-    await remind_escoffier_test(interaction.channel)
 
-@tree.command(name='test_fetch', description='ニュースとHoYoLAB記事の取得をテスト実行します')
+
+@tree.command(name="test_fetch", description="最新のゲーム内お知らせを1件取得して送信します")
 async def test_fetch(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     
-    # Run Generic News Check
-    updates_news = await client.loop.run_in_executor(None, run_scrape_and_check)
-    news_count = len(updates_news) if updates_news is not None and not updates_news.empty else 0
-    
-    # Run HoYoLAB Check
-    updates_hoyolab = await client.loop.run_in_executor(None, run_scrape_hoyolab_and_check)
-    hoyolab_count = len(updates_hoyolab) if updates_hoyolab is not None and not updates_hoyolab.empty else 0
-
-    await interaction.followup.send(
-        f"取得テスト完了！\n公式ニュース: {news_count}件\nHoYoLAB: {hoyolab_count}件\n(新規があればチャンネルに送信されます)", 
-        ephemeral=True
-    )
-
-    # Note: The existing logic inside run_scrape_and_check/run_scrape_hoyolab_and_check 
-    # returns the updates but DOES NOT send them to Discord unless called by the task loop's checking logic.
-    # WE need to manually send them here if we want immediate feedback in the channel, 
-    # OR we rely on the side effect that `run_scrape...` updates the CSV, 
-    # so the NEXT automatic check would miss them (since they are now in CSV).
-    # Wait, `run_scrape_and_check` returns `updates`. The task loop `check_updates` uses that return value to send messages.
-    # So if we run it here, we get the updates, but they are NOT sent to the channel automatically by the function itself.
-    # We must send them manually here if we want them to appear.
-    
-    channel = interaction.channel
-    
-    if updates_news is not None and not updates_news.empty:
-        for row in updates_news.to_dict(orient='records'):
-            embed = discord.Embed(
-                title=row['Title'].replace('<n>', '\n'),
-                url=row['URL'],
-                description=row['Summary'].replace('<n>', '\n'),
-                color=0x00bfff)
-            embed.set_image(url=row['Cover Image'])
-            await channel.send(embed=embed)
+    try:
+        # Fetch latest news
+        game_news = GameNews.fetch_announcements()
+        
+        if not game_news.empty:
+            # Get the first (latest) item
+            row = game_news.iloc[0]
             
-    if updates_hoyolab is not None and not updates_hoyolab.empty:
-        for row in updates_hoyolab.to_dict(orient='records'):
+            title = row['Title']
+            summary = row['Summary']
+            banner_url = row['Cover Image']
+            url = row.get('URL', '')
+            
+            description = f"{summary}"
+            
+            # 期間表示の追加
+            start_ts = row.get('start_timestamp')
+            end_ts = row.get('end_timestamp')
+            
+            try:
+                start_ts = int(float(start_ts)) if start_ts else 0
+                end_ts = int(float(end_ts)) if end_ts else 0
+            except (ValueError, TypeError):
+                pass
+
+            if start_ts > 0:
+                description += f"\n\n**期間**: <t:{start_ts}:f>"
+                if end_ts > 0:
+                    description += f" ~ <t:{end_ts}:f>"
+            
             embed = discord.Embed(
-                title=row['Title'].replace('<n>', '\n'),
-                url=row['URL'],
-                description=row['Summary'].replace('<n>', '\n'),
-                color=0xFFA500)
-            embed.set_author(name="HoYoLAB Update", icon_url="https://media.discordapp.net/attachments/110000000000000000/110000000000000000/hoyolab_icon.png")
-            embed.set_image(url=row['Cover Image'])
-            await channel.send(embed=embed)
+                title=f"{title}", 
+                description=description,
+                url=url if url else None,
+                color=0x00b0f4 # Genshin Blue-ish
+            )
+            
+            if banner_url:
+                embed.set_image(url=banner_url)
+
+            embed.set_footer(text="しゃるぼっとがお届けします！")
+            embed.timestamp = datetime.datetime.now(JST)
+            
+            # Send to the channel where command was invoked
+            await interaction.channel.send(embed=embed)
+            
+            await interaction.followup.send(
+                f"最新のお知らせを送信しました。", 
+                ephemeral=True
+            )
+        else:
+            await interaction.followup.send(
+                "お知らせが見つかりませんでした。", 
+                ephemeral=True
+            )
+    except Exception as e:
+        await interaction.followup.send(
+            f"エラーが発生しました: {e}", 
+            ephemeral=True
+        )
 
 # on_readyで各ギルドごとに同期
 @client.event
@@ -114,19 +121,12 @@ async def on_ready():
         remind_escoffier.start()
     if not remind_spiral.is_running():
         remind_spiral.start()
-    # if not check_updates.is_running():
-    #     check_updates.start()
-    # if not check_hoyolab_updates.is_running():
-    #     check_hoyolab_updates.start()
     if not check_game_news_updates.is_running():
         check_game_news_updates.start()
 
     # 各ギルドごとにコマンド同期
     for guild in guild_objects:
         # コマンドを追加
-        # tree.add_command(callcharlotte_command, guild=guild)
-        # tree.add_command(test_command, guild=guild)
-        # tree.add_command(test_remind, guild=guild)
         try:
             # tree.add_command(test_fetch, guild=guild) # Add this if you want it enabled per guild immediately on restart
             tree.copy_global_to(guild=guild)
@@ -135,97 +135,10 @@ async def on_ready():
         except Exception as e:
             print(f"tree.sync()でエラー（guild {guild.id}）: {e}")
 
-###
-### ここから下がメインの処理
-###
 
 
-# ブロッキング処理をまとめた関数
-def run_scrape_and_check():
-    scraper = Scrape()
-    html = scraper.scrape("https://genshin.hoyoverse.com/ja/news/")
-    new_data = Convert.convert(html)
-    checker = UpdateCheck()
-    # 新しい更新がある行のみを取得
-    updates = checker.check_for_updates('data_prev.csv', new_data)
-    
-    # データの保存や更新判定もここで行う（CSV書き込みもブロッキングなので）
-    if not updates.empty:
-        # 新しいデータをCSVファイルに保存 (次回更新チェック用)
-        # Note: calling this inside the thread is safe as long as we don't have multiple threads writing to it.
-        # Since check_updates is a single task, this is fine.
-        new_data.to_csv('data_prev.csv', index=False)
-        return updates
-    return None
 
-# HoYoLABのブロッキング処理
-def run_scrape_hoyolab_and_check():
-    scraper = Scrape()
-    # HoYoLAB user post list
-    url = "https://www.hoyolab.com/accountCenter/postList?id=1015537"
-    html = scraper.scrape_wait(url, ".mhy-article-card")
-    new_data = Convert.convert_hoyolab(html)
-    checker = UpdateCheck()
-    
-    updates = checker.check_for_updates('hoyolab_data.csv', new_data)
-    
-    if not updates.empty:
-        new_data.to_csv('hoyolab_data.csv', index=False)
-        return updates
-    return None
-
-# ニュースの更新チェック
-@tasks.loop(minutes=5)
-async def check_updates():
-    for cid in channel_ids:
-        channel = cached_channels.get(cid)
-        now = datetime.datetime.now(JST)
-        print('Checking for updates...{0: %m/%d %H:%M}'.format(now))
-
-        # ブロッキング処理を別スレッドで実行
-        updates = await client.loop.run_in_executor(None, run_scrape_and_check)
-
-        if updates is not None and not updates.empty:
-            
-            # Discordに埋め込みメッセージとして送信
-            for row in updates.to_dict(orient='records'):
-                embed = discord.Embed(
-                    title=row['Title'].replace('<n>', '\n'),
-                    url=row['URL'],
-                    description=row['Summary'].replace('<n>', '\n'),
-                    color=0x00bfff)
-                if row.get('Cover Image'):
-                    embed.set_image(url=row['Cover Image'])
-                await channel.send(embed=embed)
-        else:
-            print(f"No updates for channel {cid}")
-
-
-# HoYoLABの更新チェック
-@tasks.loop(minutes=30) # 頻度はお好みで
-async def check_hoyolab_updates():
-    for cid in channel_ids:
-        channel = cached_channels.get(cid)
-        now = datetime.datetime.now(JST)
-        print(f"Checking for HoYoLAB updates... {now.strftime('%m/%d %H:%M')}")
-
-        updates = await client.loop.run_in_executor(None, run_scrape_hoyolab_and_check)
-
-        if updates is not None and not updates.empty:
-            for row in updates.to_dict(orient='records'):
-                embed = discord.Embed(
-                    title=row['Title'].replace('<n>', '\n'),
-                    url=row['URL'],
-                    description=row['Summary'].replace('<n>', '\n'),
-                    color=0xFFA500) # Orange for HoYoLAB
-                embed.set_author(name="HoYoLAB Update", icon_url="https://media.discordapp.net/attachments/110000000000000000/110000000000000000/hoyolab_icon.png") # Optional customization
-                if row.get('Cover Image'):
-                    embed.set_image(url=row['Cover Image'])
-                await channel.send(embed=embed)
-        else:
-            print(f"No HoYoLAB updates for channel {cid}")
-
-@tasks.loop(minutes=30)
+@tasks.loop(minutes=10)
 async def check_game_news_updates():
     now = datetime.datetime.now(JST)
     print(f"Checking for Game News updates... {now.strftime('%m/%d %H:%M')}")
@@ -311,15 +224,7 @@ async def remind_escoffier():
             embed.set_image(url="https://upload-os-bbs.hoyolab.com/upload/2025/05/07/9fb3cbb05efb49894f0ce6356b1cb78f_6508162176253225300.png")
 
             await channel.send(embed=embed)
-# 手動実行テスト用
-async def remind_escoffier_test(channel):
-    embed = discord.Embed(
-        title="エスコフィエの料理マシナリーは呼び出したかしら？",
-        description="おはよう、月曜日ね！\nエスコフィエさんに料理をつくってもらうのを忘れずにね！")
 
-    embed.set_image(url="https://upload-os-bbs.hoyolab.com/upload/2025/05/07/9fb3cbb05efb49894f0ce6356b1cb78f_6508162176253225300.png")
-
-    await channel.send(embed=embed)
 
 
 ###
