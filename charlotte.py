@@ -1,15 +1,19 @@
 import discord
 from discord import app_commands, embeds
+from datetime import time, timezone, timedelta
 from discord.ext import tasks
 import os
-from get_latest_news import Scrape, Convert, UpdateCheck
-import dotenv
+from get_latest_news import Scrape, Convert, UpdateCheck, GameNews
+from dotenv import load_dotenv
 import datetime
 import asyncio
 import functools
 
+# Timezone Definition
+JST = timezone(timedelta(hours=9), 'Asia/Tokyo')
+
 # 環境変数の読み込み
-dotenv.load_dotenv(override=True)
+load_dotenv(override=True)
 token = os.getenv('BOT_TOKEN')
 channel_ids = [int(cid) for cid in os.getenv('CHANNEL_IDS', '').split(',') if cid.strip()]
 print('ChannelIds:', channel_ids)
@@ -110,10 +114,12 @@ async def on_ready():
         remind_escoffier.start()
     if not remind_spiral.is_running():
         remind_spiral.start()
-    if not check_updates.is_running():
-        check_updates.start()
-    if not check_hoyolab_updates.is_running():
-        check_hoyolab_updates.start()
+    # if not check_updates.is_running():
+    #     check_updates.start()
+    # if not check_hoyolab_updates.is_running():
+    #     check_hoyolab_updates.start()
+    if not check_game_news_updates.is_running():
+        check_game_news_updates.start()
 
     # 各ギルドごとにコマンド同期
     for guild in guild_objects:
@@ -173,7 +179,7 @@ def run_scrape_hoyolab_and_check():
 async def check_updates():
     for cid in channel_ids:
         channel = cached_channels.get(cid)
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(JST)
         print('Checking for updates...{0: %m/%d %H:%M}'.format(now))
 
         # ブロッキング処理を別スレッドで実行
@@ -200,8 +206,8 @@ async def check_updates():
 async def check_hoyolab_updates():
     for cid in channel_ids:
         channel = cached_channels.get(cid)
-        now = datetime.datetime.now()
-        print('Checking for HoYoLAB updates...{0: %m/%d %H:%M}'.format(now))
+        now = datetime.datetime.now(JST)
+        print(f"Checking for HoYoLAB updates... {now.strftime('%m/%d %H:%M')}")
 
         updates = await client.loop.run_in_executor(None, run_scrape_hoyolab_and_check)
 
@@ -219,6 +225,74 @@ async def check_hoyolab_updates():
         else:
             print(f"No HoYoLAB updates for channel {cid}")
 
+@tasks.loop(minutes=30)
+async def check_game_news_updates():
+    now = datetime.datetime.now(JST)
+    print(f"Checking for Game News updates... {now.strftime('%m/%d %H:%M')}")
+    
+    # 全部のチャンネルに対して通知するのは既存のロジックと同じ
+    try:
+        game_news = GameNews.fetch_announcements()
+        
+        # CSVファイルパス
+        csv_path = os.path.abspath('game_announcements.csv')
+
+        updates = UpdateCheck.check_for_updates(csv_path, game_news, merge_keys=["ann_id"])
+        
+        # データの保存
+        game_news.to_csv(csv_path, index=False)
+
+        for cid in channel_ids:
+            channel = client.get_channel(cid)
+            if channel is None:
+                print(f"Channel not found: {cid}")
+                continue
+
+            if updates is not None and not updates.empty:
+                for row in updates.to_dict(orient='records'):
+                    # Embedの作成
+                    title = row['Title']
+                    summary = row['Summary']
+                    banner_url = row['Cover Image']
+                    url = row.get('URL', '')
+                    
+                    description = f"{summary}"
+                    
+                    # 期間表示の追加
+                    start_ts = row.get('start_timestamp')
+                    end_ts = row.get('end_timestamp')
+                    
+                    # start_timestamp, end_timestamp は floatの可能性もあるため intに変換
+                    try:
+                        start_ts = int(float(start_ts)) if start_ts else 0
+                        end_ts = int(float(end_ts)) if end_ts else 0
+                    except (ValueError, TypeError):
+                        pass
+
+                    if start_ts > 0:
+                        description += f"\n\n**期間**: <t:{start_ts}:f>"
+                        if end_ts > 0:
+                            description += f" ~ <t:{end_ts}:f>"
+                    
+                    embed = discord.Embed(
+                        title=f"{title}", 
+                        description=description,
+                        url=url if url else None,
+                        color=0x00b0f4 # Genshin Blue-ish
+                    )
+                    
+                    if banner_url:
+                        embed.set_image(url=banner_url)
+
+                    embed.set_footer(text="Genshin Impact Game Announcement")
+                    embed.timestamp = datetime.datetime.now(JST)
+                    
+                    await channel.send(embed=embed)
+            else:
+                print(f"No Game News updates for channel {cid}")
+
+    except Exception as e:
+        print(f"Error in check_game_news_updates: {e}")
 
 ###
 ### エスコリマインダー
@@ -226,7 +300,7 @@ async def check_hoyolab_updates():
 # 毎週月曜日の朝7時にエスコフィエの料理マシナリーを起動するリマインダー
 @tasks.loop(minutes=1)
 async def remind_escoffier():
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(JST)
     # 月曜日かつ7:00ちょうどのみ送信
     if now.weekday() == 0 and now.hour == 7 and now.minute == 0:
         for cid in channel_ids:
@@ -254,7 +328,7 @@ async def remind_escoffier_test(channel):
 ###
 @tasks.loop(minutes=1)
 async def remind_spiral():
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(JST)
     today = now.date()
     # Check for the 15th (deadline for 16th reset)
     is_mid_month = (now.day == 15)

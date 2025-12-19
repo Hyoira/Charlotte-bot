@@ -1,0 +1,24 @@
+{
+    "name": "Charlotte-bot Dev",
+    "image": "mcr.microsoft.com/devcontainers/python:0-3.9",
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {}
+    },
+    
+    // コンテナ作成後に依存ライブラリを自動インストール
+    "postCreateCommand": "pip install --no-cache-dir -r requirements.txt",
+
+    // VS Codeの拡張機能を自動インストール
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "charliermarsh.ruff" // linter/formatter
+            ]
+        }
+    },
+
+    // ユーザー権限の設定
+    "remoteUser": "vscode"
+}
