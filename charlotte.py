@@ -235,15 +235,9 @@ async def remind_escoffier():
 async def remind_spiral():
     now = datetime.datetime.now(JST)
     today = now.date()
-    # Check for the 15th (deadline for 16th reset)
     is_mid_month = (now.day == 15)
-    
-    # Check for the last day of the month (deadline for 1st reset)
-    # The deadline is the day BEFORE the 1st of the next month.
-    tomorrow = today + datetime.timedelta(days=1)
-    is_end_month = (tomorrow.day == 1)
 
-    if (is_mid_month or is_end_month) and now.hour == 7 and now.minute == 0:
+    if is_mid_month and now.hour == 7 and now.minute == 0:
         for cid in channel_ids:
             channel = cached_channels.get(cid)
             embed = discord.Embed(title="今月の螺旋は終わったかしら？",
@@ -252,6 +246,49 @@ async def remind_spiral():
             embed.set_image(url="https://upload-os-bbs.hoyolab.com/upload/2024/04/09/618ddb0165a9d25a0a688be152e45980_375351273206424725.jpg")
 
             await channel.send(embed=embed)
+
+
+###
+### 幻想シアターリマインダー
+### 月末の朝7時に螺旋のリマインダーを起動する
+###
+@tasks.loop(minutes=1)
+async def remind_theatre():
+    now = datetime.datetime.now(JST)
+    today = now.date()
+    tomorrow = today + datetime.timedelta(days=1)
+    is_end_month = (tomorrow.day == 1)
+
+    if is_end_month and now.hour == 7 and now.minute == 0:
+        for cid in channel_ids:
+            channel = cached_channels.get(cid)
+            image = discord.File("img/theatre.png")
+            embed = discord.Embed(title="今月の幻想シアターは終わったかしら？",
+                                description="おはよう、今月の幻想シアターも最終日ね！\n報酬の受け取りも忘れないように。\n来月のシアターの情報はこんな感じよ！")
+
+            embed.set_image(url="attachment://theatre.png")
+
+            await channel.send(embed=embed)
+
+
+@tree.command(name="test_theatre", description="幻想シアターのリマインダーをテスト送信します")
+async def test_theatre(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+
+    try:
+        file = discord.File("img/theatre.png", filename="theatre.png")
+        embed = discord.Embed(
+            title="今月の幻想シアターは終わったかしら？",
+            description="おはよう、今月の幻想シアターも最終日ね！\n報酬の受け取りも忘れないように。\n来月のシアターの情報はこんな感じよ！"
+        )
+        # 添付ファイルを Embed に表示
+        embed.set_image(url="attachment://theatre.png")
+
+        await interaction.channel.send(embed=embed, file=file)
+        await interaction.followup.send("テスト送信しました。", ephemeral=True)
+    except Exception as e:
+        await interaction.followup.send(f"送信に失敗しました: {e}", ephemeral=True)
+
 
 
 # Botのトークンを環境変数から取得して実行
