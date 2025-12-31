@@ -8,6 +8,11 @@ from dotenv import load_dotenv
 import datetime
 import asyncio
 import functools
+import aiohttp
+from pathlib import Path
+from urllib.parse import urlencode
+from typing import Optional, Tuple
+
 
 # Timezone Definition
 JST = timezone(timedelta(hours=9), 'Asia/Tokyo')
@@ -17,6 +22,10 @@ load_dotenv(override=True)
 token = os.getenv('BOT_TOKEN')
 channel_ids = [int(cid) for cid in os.getenv('CHANNEL_IDS', '').split(',') if cid.strip()]
 print('ChannelIds:', channel_ids)
+SLIDE_THUMB_API = os.getenv(
+    "SLIDE_THUMB_API",
+    "https://script.google.com/macros/s/AKfycbwxgNV6vlOyl-pcW24eIhh3ZGqDKBfQVMb1R801DVCsB03r_c3RW-wwSE9dFsSI6T3v/exec"
+)
 
 # 必要な intents を設定
 intents = discord.Intents.default()
@@ -289,6 +298,103 @@ async def test_theatre(interaction: discord.Interaction):
     except Exception as e:
         await interaction.followup.send(f"送信に失敗しました: {e}", ephemeral=True)
 
+###
+### シアター画像DL
+###
+
+def sanitize_filename(name: str) -> str:
+    bad = ['\\', '/', ':', '*', '?', '"', '<', '>', '|']
+    for ch in bad:
+        name = name.replace(ch, '_')
+    name = name.strip()
+    return name if name else "slide_thumb"
+
+
+async def fetch_and_save_slide_thumb(
+    api_base: str,
+    query: str,
+    out_dir: str = "img/slides",
+    presentation_id: Optional[str] = None,
+    filename: Optional[str] = None,
+    timeout: int = 25,
+) -> Tuple[bool, Optional[Path], str]:
+    """
+    GAS(JSON) → imageUrl を取り、画像をDLして保存する。
+    戻り値: (success, saved_path, message)
+    """
+
+    params = {"query": query}
+    if presentation_id:
+        params["id"] = presentation_id
+    api_url = f"{api_base}?{urlencode(params)}"
+
+    out_dir_path = Path(out_dir)
+    out_dir_path.mkdir(parents=True, exist_ok=True)
+
+    safe = sanitize_filename(filename if filename else query)
+    if not Path(safe).suffix:
+        safe += ".png"
+    out_path = out_dir_path / safe
+
+    try:
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=timeout)
+        ) as session:
+            # 1) JSON取得
+            async with session.get(api_url) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+
+            if not data.get("success"):
+                return False, None, data.get("message", "Unknown error")
+
+            image_url = data.get("imageUrl")
+            if not image_url:
+                return False, None, "imageUrl がレスポンスに含まれていません"
+
+            # 2) 画像DL→保存
+            async with session.get(image_url) as img_resp:
+                img_resp.raise_for_status()
+                out_path.write_bytes(await img_resp.read())
+
+        return True, out_path, data.get("message", "OK")
+
+    except Exception as e:
+        return False, None, str(e)
+
+
+@tree.command(name="set_theatre_img", description="スライドからクエリ一致のサムネイルを取得して保存します")
+@app_commands.describe(
+    query="検索文字列（スライド本文/タイトルに含まれる文字）",
+    presentation_id="（任意）対象スライドID。未指定ならGAS側の既定挙動",
+    filename="（任意）保存ファイル名（拡張子不要でも可）"
+)
+async def set_theatre_img(
+    interaction: discord.Interaction,
+    query: str,
+    presentation_id: Optional[str] = None,
+    filename: Optional[str] = 'theatre'
+):
+    await interaction.response.defer(ephemeral=True)
+
+    ok, saved_path, msg = await fetch_and_save_slide_thumb(
+        api_base=SLIDE_THUMB_API,
+        query=query,
+        presentation_id=presentation_id,
+        filename=filename,
+        out_dir="img",
+    )
+
+    if not ok or not saved_path:
+        await interaction.followup.send(f"失敗: {msg}", ephemeral=True)
+        return
+
+    # 保存できたことが目的なので、ephemeral で保存先だけ返す（最小）
+    await interaction.followup.send(f"保存しました: `{saved_path}`\n{msg}", ephemeral=True)
+
+    # 動作確認でチャンネルにも貼りたいなら、必要時だけ uncomment
+    # file = discord.File(str(saved_path), filename=saved_path.name)
+    # await interaction.channel.send(content=f"保存: `{saved_path}`", file=file)
 
 
 # Botのトークンを環境変数から取得して実行
