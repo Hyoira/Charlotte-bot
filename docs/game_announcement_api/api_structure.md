@@ -89,3 +89,16 @@
 1. **API利用制限**: あくまで内部APIであるため、過度なリクエストは避け、常識的な範囲（例えば数分〜数十分に1回など）でポーリングしてください。
 2. **日時ソート**: APIからのレスポンスは必ずしも日付順とは限らないため、`start_time` を使用して降順ソートすることで「最新のお知らせ」として扱いやすくなります。
 3. **データ保存**: CSV等に保存する際、`subtitle` や `content` に含まれる特殊文字や改行コードによるフォーマット崩れに注意が必要です。
+
+## 本文取得用API (`getAnnContent`)
+一覧取得API (`getAnnList`) では `content` フィールドが空の場合があります。
+詳細なHTML本文を取得するには、別途以下のエンドポイントを使用します。
+
+### エンドポイント
+`GET https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnContent`
+
+パラメータは `getAnnList` と同様です。
+
+### レスポンス構造
+`data.list` 内の各オブジェクトに、`ann_id` と対になる形で `content` (HTML文字列) が格納されています。
+`getAnnList` で取得したリストと `ann_id` をキーにしてマージすることで、タイトルや期間情報と本文を紐付けることが可能です。
